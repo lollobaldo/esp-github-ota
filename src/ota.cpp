@@ -138,16 +138,23 @@ String get_redirect_location(String initial_url, WiFiClientSecure *client)
     HTTPClient https;
     https.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
     client->setInsecure();
-    bool mfln = client->probeMaxFragmentLength("github.com", 443, 1024);
-    ESP_LOGI(TAG, "MFLN supported: %s\n", mfln ? "yes" : "no");
+    bool mfln = false;
+#if defined(ESP8266)
+    mfln = client->probeMaxFragmentLength("github.com", 443, 1024);
     if (mfln) { client->setBufferSizes(1024, 1024); }
+#endif
+    ESP_LOGI(TAG, "MFLN supported: %s\n", mfln ? "yes" : "no");
     ESP_LOGV(TAG, "https.begin(%s)\n", initial_url.c_str());
     if (https.begin(*client, initial_url))
     {
         ESP_LOGV(TAG, "https.GET()\n");
         int httpCode = https.GET();
         char errortext[128];
+#if defined(ESP8266)
         int errCode = client->getLastSSLError(errortext, 128);
+#elif defined(ESP32)
+        int errCode = client->lastError(errortext, 128);
+#endif
         ESP_LOGV(TAG, "httpCode: %d, errorCode %d: %s\n", httpCode, errCode, errortext);
         if (httpCode != HTTP_CODE_FOUND)
         {
@@ -214,15 +221,22 @@ String get_updated_firmware_url_via_api(String releaseUrl, WiFiClientSecure *cli
     https.collectHeaders(headerKeys, sizeof(headerKeys) / sizeof(headerKeys)[0]);
 
     client->setInsecure();
-    bool mfln = client->probeMaxFragmentLength("github.com", 443, 1024);
-    ESP_LOGI(TAG, "MFLN supported: %s\n", mfln ? "yes" : "no");
+    bool mfln = false;
+#if defined(ESP8266)
+    mfln = client->probeMaxFragmentLength("github.com", 443, 1024);
     if (mfln) { client->setBufferSizes(1024, 1024); }
+#endif
+    ESP_LOGI(TAG, "MFLN supported: %s\n", mfln ? "yes" : "no");
     if (https.begin(*client, releaseUrl))
     {
         ESP_LOGV(TAG, "https.GET()\n");
         int httpCode = https.GET();
         char errortext[128];
+#if defined(ESP8266)
         int errCode = client->getLastSSLError(errortext, 128);
+#elif defined(ESP32)
+        int errCode = client->lastError(errortext, 128);
+#endif
         ESP_LOGV(TAG, "httpCode: %d, errorCode %d: %s\n", httpCode, errCode, errortext);
         if (httpCode < 0)
         {
